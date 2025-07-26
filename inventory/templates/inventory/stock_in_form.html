@@ -1,0 +1,190 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Stock In - Warehouse Inventory{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Stock In</h1>
+    <a href="{% url 'inventory:dashboard' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Create Stock In Transaction</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="stockInForm">
+                    {% csrf_token %}
+                    
+                    <!-- Transaction Details -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="transaction_id" class="form-label">Transaction ID *</label>
+                            <input type="text" class="form-control" id="transaction_id" name="transaction_id" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reference_number" class="form-label">Reference Number</label>
+                            <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="PO, Invoice, etc.">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label for="created_by" class="form-label">Created By *</label>
+                            <input type="text" class="form-control" id="created_by" name="created_by" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="remarks" name="remarks" rows="3"></textarea>
+                    </div>
+                    
+                    <!-- Items Section -->
+                    <h6 class="mb-3">Items</h6>
+                    <div id="items-container">
+                        <div class="item-row border rounded p-3 mb-3">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <label class="form-label">Product *</label>
+                                    <select class="form-control" name="product_id" required>
+                                        <option value="">Select Product</option>
+                                        {% for product in products %}
+                                        <option value="{{ product.id }}">{{ product.product_code }} - {{ product.product_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Quantity *</label>
+                                    <input type="number" class="form-control" name="quantity" min="1" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Unit Price *</label>
+                                    <input type="number" class="form-control" name="unit_price" step="0.01" min="0.01" required>
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Total</label>
+                                    <input type="text" class="form-control total-field" readonly>
+                                </div>
+                                <div class="col-md-1 d-flex align-items-end">
+                                    <button type="button" class="btn btn-danger btn-sm remove-item" style="display: none;">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-outline-secondary" id="add-item">
+                            <i class="bi bi-plus"></i> Add Another Item
+                        </button>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>Grand Total: ₹<span id="grand-total">0.00</span></strong>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle"></i> Submit Stock In
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Instructions</h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled">
+                    <li class="mb-2"><i class="bi bi-info-circle text-info"></i> Fill in all required fields marked with *</li>
+                    <li class="mb-2"><i class="bi bi-info-circle text-info"></i> Transaction ID should be unique</li>
+                    <li class="mb-2"><i class="bi bi-info-circle text-info"></i> Add multiple items using the "Add Another Item" button</li>
+                    <li class="mb-2"><i class="bi bi-info-circle text-info"></i> Unit prices will be used for valuation</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let itemCount = 1;
+    
+    // Add item functionality
+    document.getElementById('add-item').addEventListener('click', function() {
+        const container = document.getElementById('items-container');
+        const firstItem = container.querySelector('.item-row');
+        const newItem = firstItem.cloneNode(true);
+        
+        // Clear values
+        newItem.querySelectorAll('input, select').forEach(field => {
+            if (field.type === 'text' && field.classList.contains('total-field')) {
+                field.value = '';
+            } else if (field.type !== 'text' || !field.classList.contains('total-field')) {
+                field.value = '';
+            }
+        });
+        
+        // Show remove button
+        newItem.querySelector('.remove-item').style.display = 'block';
+        
+        container.appendChild(newItem);
+        itemCount++;
+        
+        // Add event listeners for the new item
+        addItemEventListeners(newItem);
+    });
+    
+    // Remove item functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-item')) {
+            e.target.closest('.item-row').remove();
+            calculateGrandTotal();
+        }
+    });
+    
+    // Add event listeners to existing items
+    document.querySelectorAll('.item-row').forEach(addItemEventListeners);
+    
+    function addItemEventListeners(item) {
+        const quantityField = item.querySelector('input[name="quantity"]');
+        const priceField = item.querySelector('input[name="unit_price"]');
+        const totalField = item.querySelector('.total-field');
+        
+        [quantityField, priceField].forEach(field => {
+            field.addEventListener('input', function() {
+                const quantity = parseFloat(quantityField.value) || 0;
+                const price = parseFloat(priceField.value) || 0;
+                const total = quantity * price;
+                totalField.value = total.toFixed(2);
+                calculateGrandTotal();
+            });
+        });
+    }
+    
+    function calculateGrandTotal() {
+        let grandTotal = 0;
+        document.querySelectorAll('.total-field').forEach(field => {
+            grandTotal += parseFloat(field.value) || 0;
+        });
+        document.getElementById('grand-total').textContent = grandTotal.toFixed(2);
+    }
+    
+    // Generate transaction ID
+    document.getElementById('transaction_id').value = 'IN' + Date.now().toString().slice(-8);
+});
+</script>
+{% endblock %}

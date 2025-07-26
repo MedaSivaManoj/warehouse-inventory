@@ -1,0 +1,108 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Stock Out</h1>
+    <a href="{% url 'inventory:dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+{% if errors %}
+<div class="alert alert-danger">
+    <ul class="mb-0">
+        {% for error in errors %}
+        <li>{{ error }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="transaction_id" class="form-label">Transaction ID *</label>
+                        <input type="text" class="form-control" id="transaction_id" name="transaction_id" required placeholder="e.g., SO-001">
+                    </div>
+                    <div class="mb-3">
+                        <label for="reference_number" class="form-label">Reference Number</label>
+                        <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="e.g., INV-12345">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="created_by" class="form-label">Created By *</label>
+                        <input type="text" class="form-control" id="created_by" name="created_by" required placeholder="e.g., admin">
+                    </div>
+                    <div class="mb-3">
+                        <label for="remarks" class="form-label">Remarks</label>
+                        <textarea class="form-control" id="remarks" name="remarks" rows="2" placeholder="Optional remarks"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <h4>Items to Remove</h4>
+            <div id="items-container">
+                <div class="row item-row mb-3 border-bottom pb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Product *</label>
+                        <select class="form-control" name="product_id" required>
+                            <option value="">Select Product</option>
+                            {% for product in products %}
+                            <option value="{{ product.id }}">{{ product.product_code }} - {{ product.product_name }} (Stock: {{ product.current_stock }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Quantity *</label>
+                        <input type="number" class="form-control" name="quantity" placeholder="Qty" required min="1">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Unit Price *</label>
+                        <input type="number" step="0.01" class="form-control" name="unit_price" placeholder="Price" required min="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Batch Number</label>
+                        <input type="text" class="form-control" name="batch_number" placeholder="Batch">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">&nbsp;</label>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-block" onclick="addItem()">+ Add Item</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <button type="submit" class="btn btn-warning btn-lg">
+                    <i class="bi bi-dash-circle"></i> Create Stock Out Transaction
+                </button>
+                <a href="{% url 'inventory:dashboard' %}" class="btn btn-secondary btn-lg ms-2">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function addItem() {
+    const container = document.getElementById('items-container');
+    const newItem = container.querySelector('.item-row').cloneNode(true);
+    
+    // Clear values in the new item
+    newItem.querySelectorAll('input, select').forEach(input => {
+        input.value = '';
+    });
+    
+    // Remove the add button from the new item and add a remove button
+    const buttonCol = newItem.querySelector('.col-md-2:last-child');
+    buttonCol.innerHTML = '<label class="form-label">&nbsp;</label><button type="button" class="btn btn-outline-danger btn-sm d-block" onclick="removeItem(this)">Remove</button>';
+    
+    container.appendChild(newItem);
+}
+
+function removeItem(button) {
+    button.closest('.item-row').remove();
+}
+</script>
+{% endblock %}

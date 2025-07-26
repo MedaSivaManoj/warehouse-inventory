@@ -1,0 +1,104 @@
+{% extends 'inventory/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Transactions</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'inventory:stock_in_form' %}" class="btn btn-success btn-sm">
+                <i class="bi bi-plus-circle"></i> Stock In
+            </a>
+            <a href="{% url 'inventory:stock_out_form' %}" class="btn btn-warning btn-sm">
+                <i class="bi bi-dash-circle"></i> Stock Out
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Options -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'inventory:transaction_list' %}" class="btn btn-outline-primary {% if not current_filter %}active{% endif %} btn-sm">All</a>
+                    <a href="{% url 'inventory:transaction_list' %}?type=IN" class="btn btn-outline-success {% if current_filter == 'IN' %}active{% endif %} btn-sm">Stock In</a>
+                    <a href="{% url 'inventory:transaction_list' %}?type=OUT" class="btn btn-outline-warning {% if current_filter == 'OUT' %}active{% endif %} btn-sm">Stock Out</a>
+                    <a href="{% url 'inventory:transaction_list' %}?type=ADJ" class="btn btn-outline-info {% if current_filter == 'ADJ' %}active{% endif %} btn-sm">Adjustments</a>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <span class="text-muted">{{ transactions.count }} transaction{{ transactions.count|pluralize }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if transactions %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Reference</th>
+                        <th>Items</th>
+                        <th>Total Qty</th>
+                        <th>Created By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td><strong>{{ transaction.transaction_id }}</strong></td>
+                        <td>{{ transaction.transaction_date|date:"M d, Y H:i" }}</td>
+                        <td>
+                            {% if transaction.transaction_type == 'IN' %}
+                                <span class="badge bg-success">Stock In</span>
+                            {% elif transaction.transaction_type == 'OUT' %}
+                                <span class="badge bg-warning">Stock Out</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ transaction.get_transaction_type_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ transaction.reference_number|default:"-" }}</td>
+                        <td>{{ transaction.total_items }}</td>
+                        <td>{{ transaction.total_quantity }}</td>
+                        <td>{{ transaction.created_by }}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/admin/inventory/stckmain/{{ transaction.id }}/change/" class="btn btn-outline-primary btn-sm" title="View Details">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/admin/inventory/stckmain/{{ transaction.id }}/change/" class="btn btn-outline-secondary btn-sm" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-journal-text" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">No Transactions Found</h4>
+            <p>Start by creating some stock movements.</p>
+            <div class="mt-3">
+                <a href="{% url 'inventory:stock_in_form' %}" class="btn btn-success me-2">
+                    <i class="bi bi-plus-circle"></i> Create Stock In
+                </a>
+                <a href="{% url 'inventory:stock_out_form' %}" class="btn btn-warning">
+                    <i class="bi bi-dash-circle"></i> Create Stock Out
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

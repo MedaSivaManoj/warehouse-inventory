@@ -1,0 +1,79 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Products - Warehouse Inventory{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Products</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="/admin/inventory/prodmast/add/" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Product
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        {% if products %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Product Code</th>
+                        <th>Product Name</th>
+                        <th>Unit</th>
+                        <th>Price</th>
+                        <th>Current Stock</th>
+                        <th>Min Stock</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td><strong>{{ product.product_code }}</strong></td>
+                        <td>{{ product.product_name }}</td>
+                        <td>{{ product.unit }}</td>
+                        <td>₹{{ product.price }}</td>
+                        <td>
+                            <strong>{{ product.stock_level }}</strong>
+                        </td>
+                        <td>{{ product.minimum_stock }}</td>
+                        <td>
+                            {% if product.stock_level <= 0 %}
+                                <span class="stock-status stock-out">Out of Stock</span>
+                            {% elif product.stock_level <= product.minimum_stock %}
+                                <span class="stock-status stock-low">Low Stock</span>
+                            {% else %}
+                                <span class="stock-status stock-in">In Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'inventory:product_detail' product.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                                <a href="/admin/inventory/prodmast/{{ product.id }}/change/" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-box" style="font-size: 4rem;"></i>
+            <h4 class="mt-3">No Products Found</h4>
+            <p>Start by adding some products to your inventory.</p>
+            <a href="/admin/inventory/prodmast/add/" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Add Your First Product
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
