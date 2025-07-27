@@ -17,9 +17,11 @@ urlpatterns = [
     path('stock-in/', views.stock_in_form, name='stock_in_form'),
     path('stock-out/', views.stock_out_form, name='stock_out_form'),
     path('transactions/', views.transaction_list, name='transaction_list'),
+    path('historical-inventory/', views.historical_inventory, name='historical_inventory'),
     
     # API endpoints
     path('api/', include(router.urls)),
     path('api/stock-movement/', views.StockMovementView.as_view(), name='stock_movement_api'),
     path('api/inventory-report/', views.InventoryReportView.as_view(), name='inventory_report_api'),
+    path('api/historical-inventory/', views.HistoricalInventoryView.as_view(), name='historical_inventory_api'),
 ]

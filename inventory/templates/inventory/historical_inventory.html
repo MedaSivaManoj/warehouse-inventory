@@ -1,0 +1,244 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Historical Inventory - Warehouse Inventory{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-history me-2"></i>Historical Inventory</h2>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'inventory:dashboard' %}">Dashboard</a></li>
+                <li class="breadcrumb-item active">Historical Inventory</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Date Selection Form -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Select Date for Inventory Snapshot
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" class="row g-3 align-items-end">
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">Date</label>
+                            <input type="date" 
+                                   id="date" 
+                                   name="date" 
+                                   class="form-control" 
+                                   value="{{ query_date_str }}"
+                                   max="{{ today|date:'Y-m-d' }}">
+                            <div class="form-text">Select a date to view inventory as it was on that day</div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-search me-1"></i>View Inventory
+                            </button>
+                        </div>
+                        {% if query_date %}
+                        <div class="col-md-2">
+                            <a href="{% url 'inventory:historical_inventory' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="fas fa-info-circle me-2"></i>How it works
+                    </h6>
+                    <p class="card-text small mb-0">
+                        This feature shows you exactly what your inventory looked like at any point in the past. 
+                        Select a date and see the stock levels as they were at the end of that day, 
+                        based on all transactions up to that date.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Message -->
+    {% if error_message %}
+    <div class="alert alert-danger" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ error_message }}
+    </div>
+    {% endif %}
+
+    <!-- Results -->
+    {% if query_date %}
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-info" role="alert">
+                <i class="fas fa-clock me-2"></i>
+                Showing inventory snapshot for: <strong>{{ query_date|date:"F d, Y" }}</strong>
+                <small class="text-muted">(end of day)</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-boxes me-2"></i>Historical Inventory Report
+                    </h5>
+                    <span class="badge bg-secondary">{{ historical_data|length }} Products</span>
+                </div>
+                <div class="card-body">
+                    {% if historical_data %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Product Code</th>
+                                    <th>Product Name</th>
+                                    <th>Unit</th>
+                                    <th>Stock at Date</th>
+                                    <th>Minimum Stock</th>
+                                    <th>Status</th>
+                                    <th>Last Movement</th>
+                                    <th>Current Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in historical_data %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ item.product.product_code }}</strong>
+                                    </td>
+                                    <td>{{ item.product.product_name }}</td>
+                                    <td>{{ item.product.unit }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ item.stock_status }} fs-6">
+                                            {{ item.stock_at_date }}
+                                        </span>
+                                    </td>
+                                    <td>{{ item.product.minimum_stock }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ item.stock_status }}">
+                                            {{ item.stock_status_text }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if item.last_movement %}
+                                            <small>
+                                                {{ item.last_movement.stck_main.transaction_date|date:"M d, Y H:i" }}<br>
+                                                <span class="badge bg-{% if item.last_movement.stck_main.transaction_type == 'IN' %}success{% else %}warning{% endif %} text-dark">
+                                                    {{ item.last_movement.stck_main.get_transaction_type_display }}
+                                                </span>
+                                            </small>
+                                        {% else %}
+                                            <small class="text-muted">No movements</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small class="text-muted">
+                                            Current: {{ item.product.current_stock }}
+                                            {% if item.product.current_stock != item.stock_at_date %}
+                                                {% if item.product.current_stock > item.stock_at_date %}
+                                                    <i class="fas fa-arrow-up text-success" title="Stock increased since then"></i>
+                                                {% else %}
+                                                    <i class="fas fa-arrow-down text-danger" title="Stock decreased since then"></i>
+                                                {% endif %}
+                                            {% endif %}
+                                        </small>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Summary Statistics -->
+                    <div class="row mt-4">
+                        <div class="col-md-3">
+                            <div class="card bg-success text-white">
+                                <div class="card-body text-center">
+                                    <h4>{{ historical_data|length|add:0 }}</h4>
+                                    <p class="mb-0">Total Products</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-primary text-white">
+                                <div class="card-body text-center">
+                                    <h4>
+                                        {% for item in historical_data %}
+                                            {% if item.stock_status == 'success' %}
+                                                {% if forloop.first %}1{% else %}{{ forloop.counter0|add:1 }}{% endif %}
+                                            {% endif %}
+                                        {% empty %}0{% endfor %}
+                                    </h4>
+                                    <p class="mb-0">In Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-warning text-dark">
+                                <div class="card-body text-center">
+                                    <h4>
+                                        {% for item in historical_data %}
+                                            {% if item.stock_status == 'warning' %}
+                                                {% if forloop.first %}1{% else %}{{ forloop.counter0|add:1 }}{% endif %}
+                                            {% endif %}
+                                        {% empty %}0{% endfor %}
+                                    </h4>
+                                    <p class="mb-0">Low Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body text-center">
+                                    <h4>
+                                        {% for item in historical_data %}
+                                            {% if item.stock_status == 'danger' %}
+                                                {% if forloop.first %}1{% else %}{{ forloop.counter0|add:1 }}{% endif %}
+                                            {% endif %}
+                                        {% empty %}0{% endfor %}
+                                    </h4>
+                                    <p class="mb-0">Out of Stock</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No products found</h5>
+                        <p class="text-muted">No products were active or no transactions existed before this date.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-calendar-search fa-4x text-muted mb-4"></i>
+                    <h4 class="text-muted">Select a Date to View Historical Inventory</h4>
+                    <p class="text-muted">
+                        Choose any date from the calendar above to see what your inventory looked like at that point in time.
+                        This helps you track how your stock levels have changed over time and understand your inventory history.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

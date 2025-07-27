@@ -8,6 +8,7 @@ A Django-based warehouse inventory tracking system that helps manage stock movem
 - **Product Management**: Add, edit, and track products with codes, names, pricing, and minimum stock levels
 - **Stock Movements**: Record stock in/out transactions with proper validation
 - **Real-time Inventory**: Automatic calculation of current stock levels
+- **Historical Inventory**: View inventory levels as they were at any specific point in time
 - **Low Stock Alerts**: Dashboard alerts for products below minimum stock levels
 - **Transaction History**: Complete audit trail of all stock movements
 
@@ -73,6 +74,7 @@ A Django-based warehouse inventory tracking system that helps manage stock movem
 - **Products**: Manage product catalog and view stock levels
 - **Stock Operations**: Record stock in/out movements
 - **Transactions**: View transaction history and details
+- **Historical Inventory**: View inventory levels at any specific date in the past
 
 ### API Endpoints
 
@@ -91,6 +93,7 @@ A Django-based warehouse inventory tracking system that helps manage stock movem
 #### Stock Operations
 - `POST /api/stock-movement/` - Create stock movement
 - `GET /api/inventory-report/` - Get inventory report
+- `GET /api/historical-inventory/` - Get historical inventory at specific date
 
 ### API Usage Examples
 
@@ -124,6 +127,25 @@ POST /api/stock-movement/
             "product_id": "1",
             "quantity": "25",
             "unit_price": "50.00"
+        }
+    ]
+}
+```
+
+#### Get Historical Inventory
+```json
+GET /api/historical-inventory/?date=2025-01-15
+{
+    "query_date": "2025-01-15T23:59:59Z",
+    "inventory_snapshot": [
+        {
+            "product_code": "LAP001",
+            "product_name": "Dell Laptop",
+            "unit": "pcs",
+            "stock_at_date": 8,
+            "minimum_stock": 5,
+            "stock_status": "In Stock",
+            "last_movement_date": "2025-01-15T10:30:00Z"
         }
     ]
 }

@@ -113,6 +113,79 @@ class InventoryReportView(APIView):
         return Response(serializer.data)
 
 
+class HistoricalInventoryView(APIView):
+    """API endpoint for historical inventory at a specific date and time"""
+    
+    def get(self, request):
+        # Get the target date from query parameters
+        target_date_str = request.query_params.get('date')
+        if not target_date_str:
+            return Response(
+                {'error': 'Date parameter is required. Format: YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Parse the date
+            from django.utils.dateparse import parse_datetime, parse_date
+            target_date = parse_datetime(target_date_str)
+            if not target_date:
+                # Try parsing as date only
+                parsed_date = parse_date(target_date_str)
+                if parsed_date:
+                    # Set time to end of day for date-only queries
+                    from datetime import time
+                    target_date = timezone.make_aware(
+                        timezone.datetime.combine(parsed_date, time(23, 59, 59))
+                    )
+                else:
+                    raise ValueError("Invalid date format")
+        except ValueError:
+            return Response(
+                {'error': 'Invalid date format. Use YYYY-MM-DD or YYYY-MM-DD HH:MM:SS'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        products = ProdMast.objects.filter(is_active=True)
+        historical_data = []
+        
+        for product in products:
+            # Calculate stock at the target date
+            historical_stock = product.stock_at_date(target_date)
+            
+            # Get last movement before target date
+            last_movement = StckDetail.objects.filter(
+                product=product,
+                stck_main__transaction_date__lte=target_date
+            ).order_by('-stck_main__transaction_date').first()
+            
+            last_movement_date = last_movement.stck_main.transaction_date if last_movement else None
+            
+            # Determine stock status at that time
+            if historical_stock <= 0:
+                stock_status = 'Out of Stock'
+            elif historical_stock <= product.minimum_stock:
+                stock_status = 'Low Stock'
+            else:
+                stock_status = 'In Stock'
+            
+            historical_data.append({
+                'product_code': product.product_code,
+                'product_name': product.product_name,
+                'unit': product.unit,
+                'stock_at_date': historical_stock,
+                'minimum_stock': product.minimum_stock,
+                'stock_status': stock_status,
+                'last_movement_date': last_movement_date,
+                'query_date': target_date
+            })
+        
+        return Response({
+            'query_date': target_date,
+            'inventory_snapshot': historical_data
+        })
+
+
 # Web Views
 def dashboard(request):
     """Main dashboard view"""
@@ -288,3 +361,70 @@ def transaction_list(request):
         'transactions': transactions,
         'current_filter': transaction_type
     })
+
+
+def historical_inventory(request):
+    """Historical inventory view - shows inventory at any given point in time"""
+    historical_data = []
+    query_date = None
+    error_message = None
+    
+    if request.method == 'GET' and request.GET.get('date'):
+        date_str = request.GET.get('date')
+        try:
+            # Parse the date
+            from django.utils.dateparse import parse_date
+            parsed_date = parse_date(date_str)
+            if parsed_date:
+                # Set time to end of day for date queries
+                from datetime import time
+                query_date = timezone.make_aware(
+                    timezone.datetime.combine(parsed_date, time(23, 59, 59))
+                )
+                
+                # Get all active products
+                products = ProdMast.objects.filter(is_active=True)
+                
+                for product in products:
+                    # Calculate stock at the target date
+                    historical_stock = product.stock_at_date(query_date)
+                    
+                    # Get last movement before target date
+                    last_movement = StckDetail.objects.filter(
+                        product=product,
+                        stck_main__transaction_date__lte=query_date
+                    ).select_related('stck_main').order_by('-stck_main__transaction_date').first()
+                    
+                    # Determine stock status at that time
+                    if historical_stock <= 0:
+                        stock_status = 'danger'  # Red
+                        stock_status_text = 'Out of Stock'
+                    elif historical_stock <= product.minimum_stock:
+                        stock_status = 'warning'  # Yellow
+                        stock_status_text = 'Low Stock'
+                    else:
+                        stock_status = 'success'  # Green
+                        stock_status_text = 'In Stock'
+                    
+                    historical_data.append({
+                        'product': product,
+                        'stock_at_date': historical_stock,
+                        'stock_status': stock_status,
+                        'stock_status_text': stock_status_text,
+                        'last_movement': last_movement,
+                        'has_movements': historical_stock > 0 or last_movement is not None
+                    })
+            else:
+                error_message = "Invalid date format. Please use YYYY-MM-DD format."
+        except Exception as e:
+            error_message = f"Error processing date: {str(e)}"
+    
+    context = {
+        'historical_data': historical_data,
+        'query_date': query_date,
+        'query_date_str': request.GET.get('date', ''),
+        'error_message': error_message,
+        'today': timezone.now().date()
+    }
+    
+    return render(request, 'inventory/historical_inventory.html', context)

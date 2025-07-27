@@ -44,6 +44,23 @@ class ProdMast(models.Model):
         
         return stock_in - stock_out
 
+    def stock_at_date(self, target_date):
+        """Calculate stock as it was at a specific date and time"""
+        from django.db.models import Sum
+        stock_in = StckDetail.objects.filter(
+            product=self,
+            stck_main__transaction_type='IN',
+            stck_main__transaction_date__lte=target_date
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        stock_out = StckDetail.objects.filter(
+            product=self,
+            stck_main__transaction_type='OUT',
+            stck_main__transaction_date__lte=target_date
+        ).aggregate(total=Sum('quantity'))['total'] or 0
+        
+        return stock_in - stock_out
+
 
 class StckMain(models.Model):
     """Stock Main - stores the transaction details"""

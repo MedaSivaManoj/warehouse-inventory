@@ -276,6 +276,11 @@ Open these URLs to test API responses:
 - http://127.0.0.1:8000/api/inventory-report/
 - Should return current stock status for all products
 
+**Historical Inventory API:**
+- http://127.0.0.1:8000/api/historical-inventory/?date=2025-01-26
+- Should return inventory snapshot for January 26, 2025
+- Try different dates to see how inventory changed over time
+
 ### 6.2 API Stock Movement (Advanced)
 If you have a tool like Postman or curl:
 
@@ -300,6 +305,45 @@ curl -X POST http://127.0.0.1:8000/api/stock-movement/ \
 
 ---
 
+## Step 7: Test Historical Inventory Feature
+
+### 7.1 Access Historical Inventory
+1. Go to **Historical Inventory** page: http://127.0.0.1:8000/historical-inventory/
+2. **Verify the interface**:
+   - Date picker is present
+   - Information card explains the feature
+   - Empty state shows when no date is selected
+
+### 7.2 Test Historical Inventory Query
+1. **Select a recent date** (e.g., yesterday or 2 days ago)
+2. **Click "View Inventory"**
+3. **Verify results**:
+   - Shows inventory snapshot for that date
+   - Displays stock levels as they were on that date
+   - Shows last movement before that date
+   - Compares with current stock levels
+   - Color-coded status (green/yellow/red)
+
+### 7.3 Test Edge Cases
+1. **Test with very old date** (before any transactions):
+   - Should show all products with 0 stock
+   - No last movements
+
+2. **Test with future date**:
+   - Should show current inventory levels
+   - Works correctly up to today
+
+3. **Test with different date formats**:
+   - Try selecting different dates from the calendar
+   - Verify date formatting is correct
+
+### 7.4 Test API Endpoint
+**Direct API Test:**
+- http://127.0.0.1:8000/api/historical-inventory/?date=2025-01-27
+- Should return JSON with inventory snapshot
+
+---
+
 ## Expected Results Summary
 
 After completing all tests, you should have:
@@ -310,6 +354,7 @@ After completing all tests, you should have:
 ✅ **Real-time stock calculation** showing accurate levels
 ✅ **Dashboard metrics** updating automatically
 ✅ **Transaction history** tracking all movements
+✅ **Historical inventory** working for any selected date
 ✅ **Low stock alerts** (if any products below minimum)
 ✅ **API endpoints** returning proper JSON responses
 
@@ -351,7 +396,8 @@ Your warehouse inventory system is working correctly if:
 4. ✅ Dashboard shows real-time status
 5. ✅ Low stock alerts appear when needed
 6. ✅ Transaction history is complete and accurate
-7. ✅ APIs return proper JSON responses
-8. ✅ Admin panel provides full management capabilities
+7. ✅ Historical inventory shows past stock levels accurately
+8. ✅ APIs return proper JSON responses
+9. ✅ Admin panel provides full management capabilities
 
 **🎉 Congratulations! Your warehouse inventory system is fully functional!**
